@@ -1,6 +1,6 @@
+use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
-use anyhow::Result;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum GitStatus {
@@ -38,7 +38,7 @@ pub fn check_status(path: &Path) -> Result<GitStatus> {
                 break;
             }
         }
-        
+
         if only_untracked {
             Ok(GitStatus::Untracked)
         } else {
@@ -50,8 +50,8 @@ pub fn check_status(path: &Path) -> Result<GitStatus> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::process::Command;
+    use tempfile::tempdir;
 
     #[test]
     fn test_check_status_no_repo() -> Result<()> {
@@ -64,7 +64,10 @@ mod tests {
     #[test]
     fn test_check_status_clean() -> Result<()> {
         let dir = tempdir()?;
-        Command::new("git").arg("init").current_dir(dir.path()).output()?;
+        Command::new("git")
+            .arg("init")
+            .current_dir(dir.path())
+            .output()?;
         let status = check_status(dir.path())?;
         assert_eq!(status, GitStatus::Clean);
         Ok(())
@@ -73,7 +76,10 @@ mod tests {
     #[test]
     fn test_check_status_untracked() -> Result<()> {
         let dir = tempdir()?;
-        Command::new("git").arg("init").current_dir(dir.path()).output()?;
+        Command::new("git")
+            .arg("init")
+            .current_dir(dir.path())
+            .output()?;
         std::fs::write(dir.path().join("file.txt"), "hello")?;
         let status = check_status(dir.path())?;
         assert_eq!(status, GitStatus::Untracked);
@@ -83,10 +89,17 @@ mod tests {
     #[test]
     fn test_check_status_dirty() -> Result<()> {
         let dir = tempdir()?;
-        Command::new("git").arg("init").current_dir(dir.path()).output()?;
+        Command::new("git")
+            .arg("init")
+            .current_dir(dir.path())
+            .output()?;
         std::fs::write(dir.path().join("file.txt"), "hello")?;
         // Stage it
-        Command::new("git").arg("add").arg("file.txt").current_dir(dir.path()).output()?;
+        Command::new("git")
+            .arg("add")
+            .arg("file.txt")
+            .current_dir(dir.path())
+            .output()?;
         let status = check_status(dir.path())?;
         assert_eq!(status, GitStatus::Dirty);
         Ok(())
