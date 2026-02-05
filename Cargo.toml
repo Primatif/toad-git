@@ -1,0 +1,11 @@
+[package]
+name = "toad-git"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+toad-core = { path = "../toad-core" }
+anyhow = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"
