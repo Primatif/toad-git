@@ -1,7 +1,7 @@
+use crate::run_git;
 use anyhow::Result;
 use std::path::Path;
 use toad_core::GitOpResult;
-use crate::run_git;
 
 /// Pushes changes to the remote.
 pub fn push(

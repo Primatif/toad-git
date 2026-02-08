@@ -19,7 +19,9 @@ pub fn preflight_check(
         .arg("--porcelain")
         .current_dir(path)
         .output()?;
-    let is_clean = String::from_utf8_lossy(&status_output.stdout).trim().is_empty();
+    let is_clean = String::from_utf8_lossy(&status_output.stdout)
+        .trim()
+        .is_empty();
     if !is_clean {
         issues.push("Repository has uncommitted changes (dirty)".to_string());
     }
@@ -39,7 +41,10 @@ pub fn preflight_check(
     };
 
     if unpushed_count > 0 {
-        issues.push(format!("Repository has {} unpushed commits", unpushed_count));
+        issues.push(format!(
+            "Repository has {} unpushed commits",
+            unpushed_count
+        ));
     }
 
     // 3. Check for SHA alignment (if it's a submodule)
@@ -66,4 +71,3 @@ pub fn preflight_check(
         issues,
     })
 }
-

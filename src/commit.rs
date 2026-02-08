@@ -1,8 +1,8 @@
+use crate::run_git;
 use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
 use toad_core::GitOpResult;
-use crate::run_git;
 
 /// Stages all changes and commits them in the given repository.
 pub fn commit(path: &Path, message: &str, project_name: &str) -> Result<GitOpResult> {
@@ -23,7 +23,7 @@ pub fn is_dirty(path: &Path) -> Result<bool> {
         .arg("--porcelain")
         .current_dir(path)
         .output()?;
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(!stdout.trim().is_empty())
 }

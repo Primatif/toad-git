@@ -1,11 +1,16 @@
+use crate::run_git;
 use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
 use toad_core::GitOpResult;
-use crate::run_git;
 
 /// Checks out a branch (creating it if it doesn't exist).
-pub fn checkout(path: &Path, branch_name: &str, project_name: &str, create: bool) -> Result<GitOpResult> {
+pub fn checkout(
+    path: &Path,
+    branch_name: &str,
+    project_name: &str,
+    create: bool,
+) -> Result<GitOpResult> {
     if create {
         run_git(path, &["checkout", "-b", branch_name], project_name)
     } else {
@@ -21,7 +26,7 @@ pub fn current_branch(path: &Path) -> Result<String> {
         .arg("HEAD")
         .current_dir(path)
         .output()?;
-    
+
     let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
     Ok(name)
 }

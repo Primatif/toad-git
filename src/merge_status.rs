@@ -18,7 +18,7 @@ pub fn has_unmerged_changes(path: &Path) -> Result<bool> {
         .args(["log", "@{u}..HEAD"])
         .current_dir(path)
         .output()?;
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(!stdout.trim().is_empty())
 }
