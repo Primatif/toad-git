@@ -1,7 +1,10 @@
 pub mod init;
 pub mod safety;
+pub mod align;
 pub mod branch;
+pub mod branches;
 pub mod commit;
+pub mod merge_status;
 pub mod remote;
 pub mod status;
 pub mod submodule;
