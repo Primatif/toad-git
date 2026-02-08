@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::path::Path;
+use std::process::Command;
 use toad_core::GitOpResult;
 use crate::run_git;
 
