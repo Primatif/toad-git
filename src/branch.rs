@@ -1,28 +1,15 @@
 use anyhow::Result;
 use std::path::Path;
-use std::process::Command;
 use toad_core::GitOpResult;
+use crate::run_git;
 
 /// Checks out a branch (creating it if it doesn't exist).
 pub fn checkout(path: &Path, branch_name: &str, project_name: &str, create: bool) -> Result<GitOpResult> {
-    let mut cmd = Command::new("git");
-    cmd.arg("checkout");
     if create {
-        cmd.arg("-b");
+        run_git(path, &["checkout", "-b", branch_name], project_name)
+    } else {
+        run_git(path, &["checkout", branch_name], project_name)
     }
-    cmd.arg(branch_name);
-    cmd.current_dir(path);
-
-    let output = cmd.output()?;
-
-    Ok(GitOpResult {
-        project_name: project_name.to_string(),
-        command: format!("git checkout {}", branch_name),
-        success: output.status.success(),
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-        exit_code: output.status.code().unwrap_or(0),
-    })
 }
 
 /// Returns the name of the current branch.
