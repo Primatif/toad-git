@@ -46,7 +46,7 @@ fn test_check_submodule_status_uninit() -> Result<()> {
     
     // We can't easily test expected_commit without a real commit in parent index,
     // but we can check if it returns uninitialized
-    let (init, status, expected, actual) = check_submodule_status(dir.path(), &sub_path)?;
+    let (init, status, _expected, actual) = check_submodule_status(dir.path(), &sub_path)?;
     assert!(!init);
     assert_eq!(status, VcsStatus::None);
     assert!(actual.is_none());
