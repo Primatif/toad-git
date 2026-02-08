@@ -1,3 +1,5 @@
+mod submodule_tests;
+
 use super::status::*;
 use anyhow::Result;
 use std::process::Command;
