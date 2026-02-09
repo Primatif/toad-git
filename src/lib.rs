@@ -348,7 +348,8 @@ pub fn generate_multi_repo_status(projects: &[ProjectDetail]) -> Result<MultiRep
         // 2. Submodule Status
         for sub in &p.submodules {
             let sub_path = p.path.join(&sub.path);
-            let sub_branch = branch::current_branch(&sub_path).unwrap_or_else(|_| "unknown".to_string());
+            let sub_branch =
+                branch::current_branch(&sub_path).unwrap_or_else(|_| "unknown".to_string());
             items.push(MultiRepoStatusItem {
                 name: format!("{} > {}", p.name, sub.name),
                 status: sub.vcs_status.clone(),
