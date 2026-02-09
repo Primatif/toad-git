@@ -1,16 +1,14 @@
-// SPDX-License-Identifier: BUSL-1.1
-use anyhow::{bail, Result};
+use crate::run_git;
 use std::path::Path;
-use std::process::Command;
+use toad_core::{ToadError, ToadResult};
 
-pub fn init_repo(path: &Path) -> Result<()> {
-    let output = Command::new("git").arg("init").current_dir(path).output()?;
-
-    if !output.status.success() {
-        bail!(
-            "Failed to initialize git repository: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+pub fn init_repo(path: &Path) -> ToadResult<()> {
+    let res = run_git(path, &["init"], "internal")?;
+    if !res.success {
+        return Err(ToadError::Git(format!(
+            "Failed to init repo at {:?}: {}",
+            path, res.stderr
+        )));
     }
     Ok(())
 }

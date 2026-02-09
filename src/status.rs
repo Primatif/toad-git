@@ -1,8 +1,8 @@
-use anyhow::Result;
+use crate::run_git;
 use std::path::Path;
-use std::process::Command;
+use toad_core::ToadResult;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum GitStatus {
     Clean,
     Dirty,
@@ -10,39 +10,21 @@ pub enum GitStatus {
     NoRepo,
 }
 
-/// Checks the git status of a directory.
-pub fn check_status(path: &Path) -> Result<GitStatus> {
+pub fn check_status(path: &Path) -> ToadResult<GitStatus> {
     if !path.join(".git").exists() {
         return Ok(GitStatus::NoRepo);
     }
 
-    let output = Command::new("git")
-        .arg("status")
-        .arg("--porcelain")
-        .current_dir(path)
-        .output()?;
-
-    if !output.status.success() {
+    let res = run_git(path, &["status", "--porcelain"], "internal")?;
+    if !res.success {
         return Ok(GitStatus::NoRepo);
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    if stdout.is_empty() {
+    if res.stdout.trim().is_empty() {
         Ok(GitStatus::Clean)
+    } else if res.stdout.contains("??") {
+        Ok(GitStatus::Untracked)
     } else {
-        // Check if there are only untracked files
-        let mut only_untracked = true;
-        for line in stdout.lines() {
-            if !line.starts_with("??") {
-                only_untracked = false;
-                break;
-            }
-        }
-
-        if only_untracked {
-            Ok(GitStatus::Untracked)
-        } else {
-            Ok(GitStatus::Dirty)
-        }
+        Ok(GitStatus::Dirty)
     }
 }

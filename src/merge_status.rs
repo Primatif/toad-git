@@ -1,24 +1,17 @@
-use anyhow::Result;
+use crate::run_git;
 use std::path::Path;
-use std::process::Command;
+use toad_core::ToadResult;
 
-/// Checks if branch 'a' is merged into branch 'b'.
-pub fn is_merged(path: &Path, a: &str, b: &str) -> Result<bool> {
-    let output = Command::new("git")
-        .args(["merge-base", "--is-ancestor", a, b])
-        .current_dir(path)
-        .output()?;
-
-    Ok(output.status.success())
+pub fn is_merged(path: &Path, a: &str, b: &str) -> ToadResult<bool> {
+    let res = run_git(path, &["merge-base", "--is-ancestor", a, b], "internal")?;
+    Ok(res.success)
 }
 
-/// Checks if the current branch has unmerged changes relative to its upstream.
-pub fn has_unmerged_changes(path: &Path) -> Result<bool> {
-    let output = Command::new("git")
-        .args(["log", "@{u}..HEAD"])
-        .current_dir(path)
-        .output()?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(!stdout.trim().is_empty())
+pub fn has_unmerged_changes(path: &Path) -> ToadResult<bool> {
+    let res = run_git(
+        path,
+        &["diff", "--name-only", "--diff-filter=U"],
+        "internal",
+    )?;
+    Ok(res.success && !res.stdout.trim().is_empty())
 }
