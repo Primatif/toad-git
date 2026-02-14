@@ -49,6 +49,17 @@ pub fn execute_multi_repo_commit(
 ) -> ToadResult<MultiRepoGitReport> {
     let mut results = Vec::new();
     for p in projects {
+        if !p.path.join(".git").exists() {
+            results.push(GitOpResult {
+                project_name: p.name.clone(),
+                command: "git commit (skipped)".to_string(),
+                success: true, // Mark as success so it doesn't trigger fail_fast
+                stdout: "Skipped: Not a git repository".to_string(),
+                stderr: String::new(),
+                exit_code: 0,
+            });
+            continue;
+        }
         let res = commit::commit(&p.path, message, &p.name)?;
         let success = res.success;
         results.push(res);
