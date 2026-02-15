@@ -20,9 +20,15 @@ pub fn check_status(path: &Path) -> ToadResult<GitStatus> {
         return Ok(GitStatus::NoRepo);
     }
 
-    if res.stdout.trim().is_empty() {
-        Ok(GitStatus::Clean)
-    } else if res.stdout.contains("??") {
+    let stdout = res.stdout.trim();
+    if stdout.is_empty() {
+        return Ok(GitStatus::Clean);
+    }
+
+    let lines: Vec<&str> = stdout.lines().collect();
+    let all_untracked = lines.iter().all(|line| line.starts_with("??"));
+
+    if all_untracked {
         Ok(GitStatus::Untracked)
     } else {
         Ok(GitStatus::Dirty)
