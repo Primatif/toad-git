@@ -26,7 +26,11 @@ pub fn has_unmerged_changes(path: &Path) -> ToadResult<bool> {
     }
 
     // Check for ahead/behind
-    let res = run_git(path, &["rev-list", "--left-right", "--count", "HEAD...@{u}"], "internal")?;
+    let res = run_git(
+        path,
+        &["rev-list", "--left-right", "--count", "HEAD...@{u}"],
+        "internal",
+    )?;
     if res.success {
         let stdout = res.stdout.trim();
         // Format is "ahead\tbehind"
