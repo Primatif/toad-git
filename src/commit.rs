@@ -7,7 +7,16 @@ pub fn commit(path: &Path, message: &str, project_name: &str) -> ToadResult<GitO
     run_git(path, &["add", "."], project_name)?;
 
     // 2. Commit
-    run_git(path, &["commit", "-m", message], project_name)
+    let mut res = run_git(path, &["commit", "-m", message], project_name)?;
+
+    // Treat exit code 1 (nothing to commit) as success
+    if res.exit_code == 1
+        && (res.stdout.contains("nothing to commit") || res.stderr.contains("nothing to commit"))
+    {
+        res.success = true;
+    }
+
+    Ok(res)
 }
 
 pub fn is_dirty(path: &Path) -> ToadResult<bool> {
