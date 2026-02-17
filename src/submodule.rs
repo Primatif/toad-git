@@ -73,23 +73,50 @@ pub fn check_submodule_status(
     }
 
     let status_line = res.stdout.trim();
-    if status_line.is_empty() {
-        return Ok((false, VcsStatus::None, None, None));
-    }
-
-    // Status format: [-| |+]<sha> <path> (<version>)
-    let initialized = !status_line.starts_with('-');
-    let actual_sha = Some(status_line[1..41].to_string());
+    let (initialized, vcs_status, actual_sha) = match parse_submodule_status_line(status_line) {
+        Some(v) => v,
+        None => return Ok((false, VcsStatus::None, None, None)),
+    };
 
     let expected_sha = get_expected_sha(repo_path, Path::new(sub_path))?;
 
-    let vcs_status = if status_line.starts_with('+') {
-        VcsStatus::Dirty
-    } else {
-        VcsStatus::Clean
+    Ok((initialized, vcs_status, expected_sha, actual_sha))
+}
+
+// Status format: [-| |+]<sha> <path> (<version>)
+// Some git versions print a leading status prefix, others may not.
+fn parse_submodule_status_line(status_line: &str) -> Option<(bool, VcsStatus, Option<String>)> {
+    let status_line = status_line.trim();
+    if status_line.is_empty() {
+        return None;
+    }
+
+    let first = status_line.split_whitespace().next().unwrap_or("");
+    if first.is_empty() {
+        return None;
+    }
+
+    let (prefix, sha_str) = match first.chars().next() {
+        Some('+') | Some('-') | Some(' ') => (&first[0..1], &first[1..]),
+        _ => ("", first),
     };
 
-    Ok((initialized, vcs_status, expected_sha, actual_sha))
+    let initialized = prefix != "-";
+    let actual_sha = if sha_str.is_empty() {
+        None
+    } else {
+        Some(sha_str.trim().to_string())
+    };
+
+    let vcs_status = if prefix == "+" {
+        VcsStatus::Dirty
+    } else if initialized {
+        VcsStatus::Clean
+    } else {
+        VcsStatus::None
+    };
+
+    Some((initialized, vcs_status, actual_sha))
 }
 
 fn get_expected_sha(repo_path: &Path, submodule_path: &Path) -> ToadResult<Option<String>> {
@@ -106,4 +133,40 @@ fn get_expected_sha(repo_path: &Path, submodule_path: &Path) -> ToadResult<Optio
         }
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_submodule_status_line;
+    use toad_core::VcsStatus;
+
+    #[test]
+    fn parse_submodule_status_line_prefixed_dirty() {
+        let sha = "6278232be17af5b63892b287475662fc31c4c0a4";
+        let line = format!("+{} bin/toad-mcp (heads/dev)", sha);
+        let (initialized, status, actual) = parse_submodule_status_line(&line).unwrap();
+        assert!(initialized);
+        assert_eq!(status, VcsStatus::Dirty);
+        assert_eq!(actual.as_deref(), Some(sha));
+    }
+
+    #[test]
+    fn parse_submodule_status_line_prefixed_uninitialized() {
+        let sha = "6278232be17af5b63892b287475662fc31c4c0a4";
+        let line = format!("-{} bin/toad-mcp (heads/dev)", sha);
+        let (initialized, status, actual) = parse_submodule_status_line(&line).unwrap();
+        assert!(!initialized);
+        assert_eq!(status, VcsStatus::None);
+        assert_eq!(actual.as_deref(), Some(sha));
+    }
+
+    #[test]
+    fn parse_submodule_status_line_unprefixed_clean() {
+        let sha = "6278232be17af5b63892b287475662fc31c4c0a4";
+        let line = format!("{} bin/toad-mcp (heads/dev)", sha);
+        let (initialized, status, actual) = parse_submodule_status_line(&line).unwrap();
+        assert!(initialized);
+        assert_eq!(status, VcsStatus::Clean);
+        assert_eq!(actual.as_deref(), Some(sha));
+    }
 }
