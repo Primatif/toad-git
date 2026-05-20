@@ -1,32 +1,27 @@
 use crate::run_git;
-use anyhow::Result;
 use std::path::Path;
-use std::process::Command;
-use toad_core::GitOpResult;
+use toad_core::{GitOpResult, ToadResult};
 
-/// Checks out a branch (creating it if it doesn't exist).
 pub fn checkout(
     path: &Path,
-    branch_name: &str,
+    branch: &str,
     project_name: &str,
     create: bool,
-) -> Result<GitOpResult> {
+) -> ToadResult<GitOpResult> {
+    let mut args = vec!["checkout"];
     if create {
-        run_git(path, &["checkout", "-b", branch_name], project_name)
-    } else {
-        run_git(path, &["checkout", branch_name], project_name)
+        args.push("-b");
     }
+    args.push(branch);
+
+    run_git(path, &args, project_name)
 }
 
-/// Returns the name of the current branch.
-pub fn current_branch(path: &Path) -> Result<String> {
-    let output = Command::new("git")
-        .arg("rev-parse")
-        .arg("--abbrev-ref")
-        .arg("HEAD")
-        .current_dir(path)
-        .output()?;
-
-    let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(name)
+pub fn current_branch(path: &Path) -> ToadResult<String> {
+    let res = run_git(path, &["rev-parse", "--abbrev-ref", "HEAD"], "internal")?;
+    if res.success {
+        Ok(res.stdout.trim().to_string())
+    } else {
+        Ok("HEAD".to_string())
+    }
 }

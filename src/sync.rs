@@ -1,61 +1,38 @@
-use anyhow::Result;
+use crate::commit::is_dirty;
+use crate::run_git;
+use crate::submodule::check_submodule_status;
 use std::path::Path;
-use std::process::Command;
-use toad_core::PreflightResult;
+use toad_core::{PreflightResult, ToadResult};
 
-/// Performs a safety check on a repository before synchronization.
 pub fn preflight_check(
     path: &Path,
     project_name: &str,
     parent_path: Option<&Path>,
-    submodule_rel_path: Option<&Path>,
-) -> Result<PreflightResult> {
+    submodule_path: Option<&Path>,
+) -> ToadResult<PreflightResult> {
     let mut issues = Vec::new();
-    let mut is_aligned = true;
+    let is_clean = !is_dirty(path)?;
 
-    // 1. Check for dirty state
-    let status_output = Command::new("git")
-        .arg("status")
-        .arg("--porcelain")
-        .current_dir(path)
-        .output()?;
-    let is_clean = String::from_utf8_lossy(&status_output.stdout)
-        .trim()
-        .is_empty();
     if !is_clean {
-        issues.push("Repository has uncommitted changes (dirty)".to_string());
+        issues.push("Repository has uncommitted changes".to_string());
     }
 
-    // 2. Check for unpushed commits (Ghost Commit Prevention)
-    let log_output = Command::new("git")
-        .arg("log")
-        .arg("@{u}..")
-        .current_dir(path)
-        .output()?;
-
-    // If command fails, it might mean no upstream branch
-    let unpushed_count = if log_output.status.success() {
-        String::from_utf8_lossy(&log_output.stdout).lines().count()
-    } else {
-        0
-    };
-
+    let unpushed_count = get_unpushed_count(path)?;
     if unpushed_count > 0 {
-        issues.push(format!(
-            "Repository has {} unpushed commits",
-            unpushed_count
-        ));
+        issues.push(format!("{} unpushed commits", unpushed_count));
     }
 
-    // 3. Check for SHA alignment (if it's a submodule)
-    if let (Some(parent), Some(rel_path)) = (parent_path, submodule_rel_path) {
-        if let Ok((init, _, expected, actual)) =
-            crate::submodule::check_submodule_status(parent, rel_path)
-        {
-            if init && expected != actual {
+    let mut is_aligned = true;
+    if let (Some(parent), Some(sub)) = (parent_path, submodule_path) {
+        if let Some(sub_path_str) = sub.to_str() {
+            let (init, _vcs, expected, actual) = check_submodule_status(parent, sub_path_str)?;
+            if !init {
+                is_aligned = false;
+                issues.push("Submodule is not initialized".to_string());
+            } else if expected != actual {
                 is_aligned = false;
                 issues.push(format!(
-                    "Submodule is drifted (Expected: {}, Actual: {})",
+                    "Submodule SHA mismatch (expected {}, got {})",
                     expected.unwrap_or_else(|| "none".to_string()),
                     actual.unwrap_or_else(|| "none".to_string())
                 ));
@@ -70,4 +47,19 @@ pub fn preflight_check(
         unpushed_count,
         issues,
     })
+}
+
+fn get_unpushed_count(path: &Path) -> ToadResult<usize> {
+    // Check if upstream exists first
+    let upstream_res = run_git(path, &["rev-parse", "--abbrev-ref", "@{u}"], "internal")?;
+    if !upstream_res.success {
+        return Ok(0);
+    }
+
+    let res = run_git(path, &["rev-list", "--count", "@{u}..HEAD"], "internal")?;
+    if res.success {
+        Ok(res.stdout.trim().parse().unwrap_or(0))
+    } else {
+        Ok(0)
+    }
 }
